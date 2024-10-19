@@ -52,9 +52,12 @@ prisma/generated/*
 
 # sensitive business logic
 app/api/*
+!app/api/upload/
+!app/api/upload/route.ts
 helper-scripts/*
 app/middleware/*
 
 # sensitive design ip
 tailwind.config.ts
 app/globals.css
+firebaseConfig.js

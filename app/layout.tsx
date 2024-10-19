@@ -12,8 +12,9 @@ import { db } from "./db"; // Adjust the path to your Prisma client
 import { cookies } from "next/headers"; // To get cookies from request headers
 import jwt from "jsonwebtoken";
 import Header from "../components/Header";
-import {ToastContainer} from "react-toastify";
+import { ToastContainer } from "react-toastify";
 import HeightAdjuster from "@/components/HeightAdjuster";
+import "react-toastify/dist/ReactToastify.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,7 +32,6 @@ const pressStart2P = Press_Start_2P({
   subsets: ["latin"],
   variable: "--font-press-start-2p",
 });
-
 
 export const metadata: Metadata = {
   title: "Kiss Or Slap",
@@ -161,17 +161,17 @@ export default async function RootLayout({
             style={{ height: "calc(var(--vh, 1vh) * 100)" }}
           >
             <Providers>
-                <OnboardingProvider initialData={initialData}>
-                  <div className={`sticky top-0 z-[10000]`}>
-                    <Header />
-                  </div>
-                  <main className="flex-grow min-h-screen bg-transparent relative z-[10]">
-                    {children}
-                  </main>
-                  <div className="relative z-20">
-                    <BottomNav />
-                  </div>
-                </OnboardingProvider>
+              <OnboardingProvider initialData={initialData}>
+                <div className={`sticky top-0 z-[10000]`}>
+                  <Header />
+                </div>
+                <main className="flex-grow min-h-screen bg-transparent relative z-[10]">
+                  {children}
+                </main>
+                <div className="relative z-20">
+                  <BottomNav />
+                </div>
+              </OnboardingProvider>
             </Providers>
           </div>
         </HeightAdjuster>

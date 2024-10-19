@@ -5,8 +5,6 @@ import { useOnboardingData } from "../../hooks/useOnboardingData";
 import { ProgressBar } from "../../../components/ProgressBar";
 import InteractUserProfile from "@/components/InteractUserProfile/page";
 import Button from "@/components/Button";
-import { storage } from "../../../firebaseConfig";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const Step5 = () => {
   const router = useRouter();
@@ -47,7 +45,7 @@ const Step5 = () => {
         actedOnYou: getElementPosition(".acted-on-you"),
       };
 
-      console.log("newPositions: ", newPositions); 
+      console.log("newPositions: ", newPositions);
       setElementPositions(newPositions);
     };
 
@@ -72,7 +70,7 @@ const Step5 = () => {
             rect.width, // width
             rect.height // height
           ),
-      }));
+        }));
       }
     };
 
@@ -177,14 +175,44 @@ const Step5 = () => {
   };
 
   const tooltips = [
-    { content: "Welcome to the onboarding process! Let's get started.", position: "center" },
-    { content: "These are your points. Earn more by interacting!", position: "custom", element: "points" },
-    { content: "This is your karma score. Be nice to others!", position: "custom", element: "karmaScore" },
-    { content: "Your hot score shows how popular you are.", position: "custom", element: "hotScore" },
-    { content: "Kiss other users to show your affection.", position: "custom", element: "kissButton" },
-    { content: "Slap users you don't like (but be careful!).", position: "custom", element: "slapButton" },
-    { content: "This icon shows when someone has interacted with you.", position: "custom", element: "actedOnYou" },
-    { content: "You're all set! Click 'Finish' to complete the onboarding.", position: "center" }
+    {
+      content: "Welcome to the onboarding process! Let's get started.",
+      position: "center",
+    },
+    {
+      content: "These are your points. Earn more by interacting!",
+      position: "custom",
+      element: "points",
+    },
+    {
+      content: "This is your karma score. Be nice to others!",
+      position: "custom",
+      element: "karmaScore",
+    },
+    {
+      content: "Your hot score shows how popular you are.",
+      position: "custom",
+      element: "hotScore",
+    },
+    {
+      content: "Kiss other users to show your affection.",
+      position: "custom",
+      element: "kissButton",
+    },
+    {
+      content: "Slap users you don't like (but be careful!).",
+      position: "custom",
+      element: "slapButton",
+    },
+    {
+      content: "This icon shows when someone has interacted with you.",
+      position: "custom",
+      element: "actedOnYou",
+    },
+    {
+      content: "You're all set! Click 'Finish' to complete the onboarding.",
+      position: "center",
+    },
   ];
 
   const currentTooltip = tooltips[currentStep];
@@ -194,7 +222,14 @@ const Step5 = () => {
     name: data.name,
     birthday: data.birthday,
     bio: data.bio,
-    images: [{ imageUrl: data.photo instanceof Blob ? URL.createObjectURL(data.photo) : data.photo }],
+    images: [
+      {
+        imageUrl:
+          data.photo instanceof Blob
+            ? URL.createObjectURL(data.photo)
+            : data.photo,
+      },
+    ],
     hotScore: data.hotScore || 50,
     karmaScore: data.karmaScore || 50,
     otherUserActed: true,
@@ -252,8 +287,13 @@ export default Step5;
 
 interface TooltipProps {
   content: string;
-  position: 
-  "center" | "top" | "bottom" | "bottom-left" | "bottom-right" | "custom";
+  position:
+    | "center"
+    | "top"
+    | "bottom"
+    | "bottom-left"
+    | "bottom-right"
+    | "custom";
   elementPosition?: {
     top: number;
     left: number;
@@ -403,7 +443,7 @@ const Tooltip: React.FC<TooltipProps> = ({
           style={{
             position: "absolute",
             left: "50%",
-            transform: `translateX(-50%) ${isAbove ?  "": "rotate(180deg)"}`,
+            transform: `translateX(-50%) ${isAbove ? "" : "rotate(180deg)"}`,
             [isAbove ? "bottom" : "top"]: "-6px",
           }}
         >
