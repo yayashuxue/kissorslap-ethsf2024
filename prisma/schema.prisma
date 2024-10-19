@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://postgres:pLNnGgrjOKJJUhwueOAwXcCLBVheiTIX@junction.proxy.rlwy.net:47143/railway" // Changed from DATABASE_URL_PRODUCTION to DATABASE_URL_DEVELOPMENT
+}
+
+
+model User {
+  id                   String      @id @default(uuid()) 
+  outsideId            String      @unique 
+  name                 String? 
+  isComplete           Boolean     @default(false) 
+  username             String?     @unique
+  genderPreference     GenderPreference?
+  age                  Int? 
+  birthday     DateTime?
+  gender               Gender?
+  phoneNumber          String?  @unique
+  email                String?  @unique
+  bio                  String?
+  hotScore             Int         @default(0) // Store as integer between 0 and 100
+  karmaScore           Int         @default(0) // Store as integer between 0 and 100
+  points               Int         @default(0)
+  interactionsSent     Interaction[] @relation("InteractionsSent")
+  interactionsReceived Interaction[] @relation("InteractionsReceived")
+  images               Image[]     @relation("UserImages")
+  chatsSent            Chat[]      @relation("ChatUser1")
+  chatsReceived        Chat[]      @relation("ChatUser2")
+  subscription         Json?
+  messages             Message[]   @relation("Sender")
+  seenUsers            HasSeen[]   @relation("SeenByUser") 
+  wasSeenBy            HasSeen[]   @relation("SeenUser") 
+  kissesGiven          Int         @default(0)
+  kissesReceived       Int         @default(0)
+  totalInteractionsReceived    Int         @default(0) // total # of interactions on x user
+  lastActive           DateTime    @default(now())
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  pointDrops        PointDrop[]  // Link to PointDrop model
+
+  // referral 
+  referralCode   String?   @unique
+  referrerId     String?   
+  referrer       User?     @relation("UserReferrals", fields: [referrerId], references: [id])
+  referralsMade  User[]    @relation("UserReferrals")
+
+  @@map("users")
+}
+
+model PointDrop {
+  id         Int      @id @default(autoincrement())
+  userId     String   // Matches User.id (which is a String)
+  user       User     @relation(fields: [userId], references: [id])
+  eventType  String   // Describes the type of event (e.g., 'onboarding', 'referral')
+  points     Int      // How many points were awarded
+  createdAt  DateTime @default(now()) // Timestamp of when the points were awarded
+}
+
+
+
+model HasSeen {
+  seenByUser   User     @relation("SeenByUser", fields: [seenByUserId], references: [id])
+  seenByUserId String
+  seenUser     User     @relation("SeenUser", fields: [seenUserId], references: [id])
+  seenUserId   String
+  seenAt       DateTime @default(now()) // Timestamp when the user was seen
+
+  @@id([seenByUserId, seenUserId])
+  @@map("has_seen") // Mapping HasSeen model to the "has_seen" table
+}
+
+model Interaction {
+  user1       User    @relation("InteractionsSent", fields: [user1Id], references: [id])
+  user1Id     String
+  user1Action Action? // Action for user1 (KISS, SLAP, etc.)
+
+  user2       User    @relation("InteractionsReceived", fields: [user2Id], references: [id])
+  user2Id     String
+  user2Action Action? // Action for user2 (KISS, SLAP, etc.)
+
+  result               InteractionResult? // Final result based on actions (MUTUAL_KISS, KISS_SLAP, etc.)
+  status               InteractionStatus // PENDING, COMPLETE
+  senderTokensChange   Int?
+  receiverTokensChange Int?
+  interactionTimestamp DateTime           @default(now())
+  chat      Chat?     @relation(fields: [chatId], references: [id])
+  chatId               String? // Optional relationship to a Chat
+  updatedAt            DateTime?           @updatedAt
+  @@id([user1Id, user2Id]) // Composite primary key based on user1Id and user2Id
+  @@map("interactions") // Map to "interactions" table
+}
+
+enum InteractionStatus {
+  PENDING
+  COMPLETE
+}
+
+model Image {
+  id         String       @id @default(uuid())
+  outsideId  String? // Nullable, for external image ID
+  user       User      @relation("UserImages", fields: [userId], references: [id])
+  userId     String
+  imageUrl   String
+  imageType  ImageType
+  uploadedAt DateTime  @default(now())
+
+  @@map("images") // Mapping Image model to the "images" table
+}
+
+model Chat {
+  id          String     @id @default(uuid())  // Use UUID for the unique chat ID
+  user1       User       @relation("ChatUser1", fields: [user1Id], references: [id])
+  user1Id     String
+  user2       User       @relation("ChatUser2", fields: [user2Id], references: [id])
+  user2Id     String
+  messages    Message[]  // Relation to Message model
+  Interaction Interaction[]
+  @@map("chats")  // Mapping Chat model to the "chats" table
+}
+
+
+model Message {
+  id        String      @id @default(uuid())
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  chatId    String
+  sender    User     @relation("Sender", fields: [senderId], references: [id])
+  senderId  String
+  content   String
+  hasSeen   Boolean    @default(false)  
+  timestamp DateTime @default(now())
+  @@map("messages") // Mapping Message model to the "messages" table
+}
+
+
+enum Action {
+  KISS
+  SLAP
+}
+
+enum InteractionResult {
+  SLAP_KISS
+  MUTUAL_KISS
+  KISS_SLAP
+  MUTUAL_SLAP
+}
+
+enum ImageType {
+  PROFILE
+  GALLERY
+}
+
+
+enum GenderPreference {
+MALE 
+FEMALE
+BOTH
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
