@@ -61,3 +61,6 @@ app/middleware/*
 tailwind.config.ts
 app/globals.css
 firebaseConfig.js
+
+# api keys
+api_keys/*
