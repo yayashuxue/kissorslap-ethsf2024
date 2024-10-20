@@ -1,30 +1,123 @@
-import React, { useState, useCallback, useMemo } from "react";
+"use client";
+
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { Spinner } from "@/components/Spinner";
 import { FormField } from "@/components/FormField";
 import { useOnboardingData } from "@/app/hooks/useOnboardingData";
 import Button from "./Button";
-import { generateSecureToken } from "@/app/utils/queries"; // Assume this function exists
+import { generateSecureToken } from "@/app/utils/queries";
+import { CBPayInstanceType, initOnRamp } from "@coinbase/cbpay-js";
 
 interface RechargeProps {
   onClose: () => void;
 }
+export const rechargeOptions = [
+  { amount: 1, points: 90, flowAmount: 1.79 },
+  { amount: 2, points: 185, flowAmount: 3.57 },
+  { amount: 5, points: 470, flowAmount: 8.93 },
+];
 
 const Recharge: React.FC<RechargeProps> = ({ onClose }) => {
   const pathname = usePathname();
   const { user } = usePrivy();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState<string>("");
-  const [selectedAsset, setSelectedAsset] = useState<string>("USDC"); // New state for asset selection
+  const [selectedAsset, setSelectedAsset] = useState<string>("USDC");
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { data } = useOnboardingData();
-  const rechargeOptions = [
-    { amount: 1, points: 90, flowAmount: 1.79 },
-    { amount: 2, points: 185, flowAmount: 3.57 },
-    { amount: 5, points: 470, flowAmount: 8.93 },
-  ];
+  const [onrampInstance, setOnrampInstance] = useState<CBPayInstanceType | null>(null);
+
+
+
+  const calculatePointsFromTransaction = (selectedAmount: number | null, selectedAsset: string) => {
+    if (selectedAmount === null) return 0;
+
+    const option = rechargeOptions.find(option => option.amount === selectedAmount);
+    return option ? option.points : 0;
+  };
+
+  useEffect(() => {
+    const ethAddress = selectedAsset === "USDC"
+      ? "0xD9F8bf1F266E50Bb4dE528007f28c14bb7edaff7"
+      : "0xdd43a14758eb96d3";
+
+    const blockchains = selectedAsset === "USDC" ? ["polygon"] : ["flow"];
+
+    const initializeOnRamp = async () => {
+
+      try {
+        const token = await generateSecureToken({
+          ethAddress,
+          blockchains,
+        });
+
+        initOnRamp(
+          {
+            appId: "66442d99-d795-458d-a102-7e931cb1a8d1",
+            widgetParameters: {
+              addresses: { ethAddress: blockchains },
+              // assets: ["ETH", "USDC", "BTC"],
+              defaultAsset: selectedAsset,
+              presetFiatAmount: selectedAmount || parseFloat(customAmount) || 1,
+              fiatCurrency: "USD",
+            },
+            onSuccess: async () => {
+              console.log("success");
+
+              // Call backend to credit points
+              try {
+                const response = await fetch("/api/credit-points", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    points: calculatePointsFromTransaction(
+                      selectedAmount,
+                      selectedAsset
+                    ),
+                  }),
+                  credentials: "include", // This ensures cookies (including privy-token) are sent with the request
+                });
+
+                if (!response.ok) {
+                  throw new Error("Failed to credit points");
+                }
+
+                console.log("Points credited successfully");
+              } catch (error) {
+                console.error("Error crediting points:", error);
+              }
+            },
+            onExit: () => {
+              console.log("exit");
+            },
+            onEvent: (event) => {
+              console.log("event", event);
+            },
+            experienceLoggedIn: "popup",
+            experienceLoggedOut: "popup",
+            closeOnExit: true,
+            closeOnSuccess: true,
+          },
+          (_, instance) => {
+            setOnrampInstance(instance);
+          }
+        );
+      } catch (error) {
+        console.error("Failed to initialize onramp:", error);
+      }
+    };
+
+    initializeOnRamp();
+
+    return () => {
+      onrampInstance?.destroy();
+    };
+  }, [selectedAsset, selectedAmount, customAmount]);
 
   const handleSelectAmount = (amount: number) => {
     setSelectedAmount(amount);
@@ -46,7 +139,7 @@ const Recharge: React.FC<RechargeProps> = ({ onClose }) => {
       return;
     }
 
-    const amount = selectedAmount || parseFloat(customAmount) || 1; // Default to 1 if no amount is selected
+    const amount = selectedAmount || parseFloat(customAmount) || 1;
     if (amount < 1) {
       setError("Amount must be at least $1.");
       return;
@@ -56,17 +149,18 @@ const Recharge: React.FC<RechargeProps> = ({ onClose }) => {
       setIsLoading(true);
       setError("");
 
-      // Generate secure token
       const token = await generateSecureToken({
-        ethAddress: "0xD9F8bf1F266E50Bb4dE528007f28c14bb7edaff7",
-        blockchains: ["polygon"],
+        ethAddress:
+          selectedAsset === "USDC"
+            ? "0xD9F8bf1F266E50Bb4dE528007f28c14bb7edaff7"
+            : "0xdd43a14758eb96d3",
+        blockchains: [selectedAsset === "USDC" ? "polygon" : "flow"],
       });
+      console.log("selectedAsset", selectedAsset);
       console.log("token", token);
-      
-      // Construct Onramp URL based on selected asset
+
       const onrampUrl = `https://pay.coinbase.com/buy/select-asset?sessionToken=${token}&defaultAsset=${selectedAsset}&presetFiatAmount=${amount}&fiatCurrency=USD`;
-      
-      // Open Onramp in a new window
+
       window.open(onrampUrl, "_blank", "popup,width=540,height=700");
     } catch (err) {
       console.log(err);
@@ -76,10 +170,13 @@ const Recharge: React.FC<RechargeProps> = ({ onClose }) => {
     }
   }, [user, selectedAmount, customAmount, selectedAsset]);
 
+  const handleClick = () => {
+    onrampInstance?.open();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 z-10000">
       <div className="w-full max-w-md mx-auto bg-[#161616] opacity-2 p-8 rounded-xl shadow-lg border relative">
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-white text-2xl font-bold"
@@ -106,14 +203,16 @@ const Recharge: React.FC<RechargeProps> = ({ onClose }) => {
             </div>
 
             <div
-              className="flex items-center justify-between w-48 p-1 bg-gray-800 rounded-full cursor-pointer  text-md"
+              className="flex items-center justify-between w-48 p-1 bg-gray-800 rounded-full cursor-pointer text-md font-semibold"
               onClick={() =>
                 handleAssetSelection(selectedAsset === "FLOW" ? "USDC" : "FLOW")
               }
             >
               <div
                 className={`flex-1 flex items-center justify-center gap-2 text-center py-1 rounded-full transition-colors duration-300 ${
-                  selectedAsset === "FLOW" ? "bg-yellow-500 text-black" : "text-white"
+                  selectedAsset === "FLOW"
+                    ? "bg-yellow-500 text-black"
+                    : "text-white"
                 }`}
               >
                 <img src="/flow.png" alt="FLOW" className="w-4 h-4" />
@@ -121,7 +220,9 @@ const Recharge: React.FC<RechargeProps> = ({ onClose }) => {
               </div>
               <div
                 className={`flex-1 flex items-center justify-center gap-2 text-center py-1 rounded-full transition-colors duration-300 ${
-                  selectedAsset === "USDC" ? "bg-yellow-500 text-black" : "text-white"
+                  selectedAsset === "USDC"
+                    ? "bg-yellow-500 text-black"
+                    : "text-white"
                 }`}
               >
                 <img src="/usdc.png" alt="USDC" className="w-4 h-4" />
@@ -129,19 +230,9 @@ const Recharge: React.FC<RechargeProps> = ({ onClose }) => {
               </div>
             </div>
 
-            {/* <p className="self-stretch font-semibold text-white text-xl text-center">
-              Select a recharge amount:
-            </p>
-
-            <div className="w-full">
-              <input
-                type="number"
-                value={customAmount}
-                onChange={handleCustomAmountChange}
-                placeholder="Or enter custom amount (USD)"
-                className="w-full px-4 py-3 bg-transparent border border-purple-300 border-opacity-30 rounded-lg text-white placeholder-gray-500"
-              />
-            </div> */}
+            <div className="text-center mt-2 text-sm text-white font-press-start">
+              {selectedAsset === "FLOW" ? "Extra Rewards" : "Easiest"}
+            </div>
 
             <div className="grid grid-cols-3 gap-4 w-full">
               {rechargeOptions.map((option) => (
@@ -189,12 +280,13 @@ const Recharge: React.FC<RechargeProps> = ({ onClose }) => {
 
             {error && <p className="text-red-500 mt-2">{error}</p>}
 
-            <Button
-              onClick={handleRecharge}
-              loading={isLoading}
-              text="Add Fund"
-              variant="secondary"
-            />
+            <button onClick={handleClick} disabled={!onrampInstance}>
+              <img
+                src="/button-cbOnramp-normal-condensed-generic-Light.svg"
+                alt="Buy with Coinbase"
+                className="w-full h-auto" // Adjust width and height as needed
+              />
+            </button>
           </div>
         </div>
       </div>

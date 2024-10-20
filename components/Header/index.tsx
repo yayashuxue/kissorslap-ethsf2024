@@ -6,6 +6,7 @@ import { usePrivy } from "@privy-io/react-auth"; // Import Privy hook
 import Recharge from "@/components/Recharge";
 import { usePathname, useRouter } from "next/navigation";
 import "@/app/globals.css";
+import Withdraw from "@/components/Withdraw";
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -14,6 +15,7 @@ export default function Header() {
   const [showRecharge, setShowRecharge] = useState(false);
   const [pointsDropdownVisible, setPointsDropdownVisible] = useState(false);
   const [usernameDropdownVisible, setUsernameDropdownVisible] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
   const router = useRouter();
   const handlePointsClick = () => {
     setPointsDropdownVisible(!pointsDropdownVisible);
@@ -25,6 +27,10 @@ export default function Header() {
   };
   const handleRechargeClick = () => {
     setShowRecharge(true);
+  };
+
+  const handleWithdrawClick = () => {
+    setShowWithdraw(true);
   };
 
   // Effect to handle scroll and set header background
@@ -142,6 +148,12 @@ export default function Header() {
                       >
                         Add 💰
                       </button>
+                      <button
+                        className="block w-48 text-left px-4 py-2 text-black hover:bg-gray-100 text-xs"
+                        onClick={handleWithdrawClick}
+                      >
+                        Withdraw 💰
+                      </button>
                     </div>
                   )}
                 </div>
@@ -171,6 +183,7 @@ export default function Header() {
       </div>
       <div className="h-24"></div> {/* Spacer div */}
       {showRecharge && <Recharge onClose={() => setShowRecharge(false)} />}
+      {showWithdraw && <Withdraw onClose={() => setShowWithdraw(false)} />}
     </>
   );
 }

@@ -91,9 +91,9 @@ const GameDemo = () => {
         <p className="text-[16px] font-weight-400">
           Discover a fun, interactive game where players earn rewards through
           playful interactions. Points can be{" "}
-          <span className="text-stroke font-press-start">redeemed</span> to{" "}
-          <span className="text-stroke font-press-start">Starbucks</span>{" & "}
-          <span className="text-stroke font-press-start">Amazon</span>
+          <span className="text-stroke font-press-start">redeemed</span>
+          {" & "}
+          <span className="text-stroke font-press-start">cashed out</span>
         </p>
       </div>
 
